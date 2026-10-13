@@ -1,0 +1,42 @@
+name: Use detailed botanical dahlia cover sketch
+on:
+  push:
+    paths:
+      - '.github/workflows/botanical-cover.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace only empty cover floral sketch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          petals=[]
+          # layered irregular botanical petals, deliberately varied rather than geometric rings
+          specs=[
+            (50,50,0,8,39),(50,50,27,7,37),(50,50,58,8,40),(50,50,91,7,38),(50,50,123,8,40),(50,50,151,7,37),(50,50,181,8,39),(50,50,211,7,38),(50,50,242,8,40),(50,50,273,7,37),(50,50,302,8,39),(50,50,331,7,38),
+            (50,50,14,7,31),(50,50,46,6,30),(50,50,78,7,32),(50,50,109,6,30),(50,50,140,7,32),(50,50,169,6,30),(50,50,198,7,31),(50,50,229,6,30),(50,50,260,7,32),(50,50,289,6,30),(50,50,318,7,31),(50,50,347,6,30),
+            (50,50,2,6,23),(50,50,42,5,22),(50,50,84,6,24),(50,50,126,5,22),(50,50,168,6,23),(50,50,210,5,22),(50,50,252,6,24),(50,50,294,5,22),(50,50,336,6,23)
+          ]
+          for cx,cy,a,rx,ry in specs:
+            petals.append(f'<ellipse cx="50" cy="{50-ry+4}" rx="{rx}" ry="{ry}" transform="rotate({a} 50 50)"/>')
+          svg='<div class="coverFlower" aria-hidden="true"><svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="0.72" stroke-linecap="round" stroke-linejoin="round">'+''.join(petals)+'<path d="M45 49c2-5 8-7 12-3 4 4 1 10-4 12-6 2-11-3-8-9Z"/><path d="M48 46c3 1 6 4 6 8M44 52c4-1 9 0 12 3M51 43c-1 4 0 9 3 12"/></g></svg></div>'
+          s,n=re.subn(r'<div class="coverFlower"[^>]*>.*?</div>',svg,s,count=1,flags=re.S)
+          if n != 1: raise SystemExit(f'coverFlower matches: {n}')
+          s=re.sub(r'\.coverFlower\{[^}]*\}(?:\.coverFlower svg\{[^}]*\})?', '.coverFlower{position:absolute;left:-12%;top:-8%;width:124%;height:116%;margin:0;color:#667263;opacity:.14;pointer-events:none;transform:rotate(-5deg)}.coverFlower svg{display:block;width:100%;height:100%}', s, count=1)
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Use detailed botanical dahlia empty cover sketch"
+          git push
