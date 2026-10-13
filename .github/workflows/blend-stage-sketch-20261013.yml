@@ -1,0 +1,31 @@
+name: Blend stage sketch background
+on:
+  push:
+    paths:
+      - '.github/workflows/blend-stage-sketch-20261013.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Blend sketch background
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          rule='.stageSketch{mix-blend-mode:multiply;background:transparent}'
+          if rule not in s:
+              s=s.replace('</style>',rule+'</style>',1)
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Blend stage sketch background'
+          git push
