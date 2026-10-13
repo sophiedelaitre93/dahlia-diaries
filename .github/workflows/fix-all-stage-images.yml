@@ -1,0 +1,51 @@
+name: Fix all growth stage images
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-all-stage-images.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix stage image paths and blending
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          # Keep every stage illustration visually seamless wherever it is used.
+          rule='.stageSketch img{display:block;width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;background:transparent}'
+          s=re.sub(r'\.stageSketch img\{[^}]*\}',rule,s,count=1)
+          # Normalise every stage filename reference to the files that actually exist in repo.
+          files={
+            'tuber':'stage-tuber.svg','sprouting':'stage-sprouting.svg','planted':'stage-planted.svg',
+            'growing':'stage-growing.svg','budding':'stage-budding.svg','flowering':'stage-flowering.svg',
+            'end season':'stage-end-season.svg','end-season':'stage-end-season.svg','endseason':'stage-end-season.svg'
+          }
+          # Repair common stale/missing stage asset references without altering labels/layout.
+          for key,f in files.items():
+              slug=key.replace(' ','[-_ ]?')
+              s=re.sub(r'stage[-_ ]?'+slug+r'\.(?:png|jpg|jpeg|webp|svg)',f,s,flags=re.I)
+          p.write_text(s)
+          PY
+      - name: Verify stage assets
+        run: |
+          test -f stage-tuber.svg
+          test -f stage-sprouting.svg
+          test -f stage-planted.svg
+          test -f stage-growing.svg
+          test -f stage-budding.svg
+          test -f stage-flowering.svg
+          test -f stage-end-season.svg
+      - name: Commit update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix all growth stage images'
+          git push
