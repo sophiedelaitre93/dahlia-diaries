@@ -1,0 +1,34 @@
+name: Match My Dahlias script font
+on:
+  push:
+    paths:
+      - '.github/workflows/match-my-dahlias-script-font.yml'
+permissions:
+  contents: write
+jobs:
+  change:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Match the existing Add Dahlia script font
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          # The Add Dahlia subtitle already uses the site's elegant Cormorant italic script treatment.
+          # Reuse that exact family/style on My Dahlias; only this subtitle is changed.
+          old=re.compile(r"\.mdIntro\{[^}]*\}")
+          new=".mdIntro{color:var(--sage);font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:400;font-size:38px;line-height:1.15;padding:10px 22px 16px;letter-spacing:0}"
+          s,n=old.subn(new,s,count=1)
+          if not n: raise SystemExit('mdIntro style not found')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Match My Dahlias tagline font to Add Dahlia'
+          git push
