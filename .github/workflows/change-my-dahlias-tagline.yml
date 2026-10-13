@@ -1,0 +1,30 @@
+name: Change My Dahlias tagline
+on:
+  push:
+    paths:
+      - '.github/workflows/change-my-dahlias-tagline.yml'
+permissions:
+  contents: write
+jobs:
+  change:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Change collection tagline to cursive Grow Track Bloom
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('My growing collection','Grow · Track · Bloom')
+          # Only style the My Dahlias collection subtitle; do not touch Add Dahlia positioning/layout.
+          s=s.replace('.mdIntro{font-style:italic;color:var(--sage);font-size:27px;padding:8px 22px 14px}', ".mdIntro{color:var(--sage);font-family:'Allura','Brush Script MT','Segoe Script',cursive;font-style:normal;font-size:38px;line-height:1.15;padding:10px 22px 16px;letter-spacing:.2px}")
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Change My Dahlias tagline to Grow Track Bloom'
+          git push
