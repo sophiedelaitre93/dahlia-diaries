@@ -1,0 +1,37 @@
+name: Fix Add Dahlia screen render
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-add-screen-render.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add safe screen rendering fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          css='''<style id="add-screen-render-fix">
+          #addDahliaNew{display:none;background:var(--cream);width:100%;min-height:100vh;padding:0 0 40px;margin:0}
+          #addDahliaNew.active{display:block!important}
+          #addDahliaNew .addDahliaHead{margin:0;padding:14px 18px 8px;display:flex;align-items:center;gap:12px}
+          #addDahliaNew .addDahliaHead button{border:0;background:none;color:#26342b;font-size:40px;line-height:1}
+          #addDahliaNew .addDahliaHead h1{margin:0;font-size:42px;color:#26342b}
+          #addDahliaNew .addDahliaForm{padding:0 18px 30px}
+          </style>'''
+          if 'id="add-screen-render-fix"' not in s:
+              s=s.replace('</head>',css+'</head>',1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Fix Add Dahlia screen rendering'
+          git push
