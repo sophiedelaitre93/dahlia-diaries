@@ -1,0 +1,33 @@
+name: Remove sprout from identification status
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-sprout-20261013.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove sprout only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          target = '\U0001f331'
+          n = s.count(target)
+          print('matches', n)
+          if n != 1:
+              raise SystemExit('Expected one sprout')
+          p.write_text(s.replace(target, '', 1))
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Remove sprout from identification status'
+          git push
