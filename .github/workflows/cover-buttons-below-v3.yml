@@ -1,0 +1,42 @@
+name: Place cover controls below photo and fix removal
+on:
+  push:
+    paths:
+      - '.github/workflows/cover-buttons-below-v3.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update cover controls only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html'); s=p.read_text()
+          # Move both controls visually below the photo by reserving footer space inside left column.
+          # Photo itself stops above the controls, so buttons no longer overlay it.
+          add='''.profileArt.hasCover{padding-bottom:96px;box-sizing:border-box}.profileArt.hasCover .profileCoverImg{bottom:96px;height:calc(100% - 96px)}.profileArt.hasCover .changeCover{left:12px;right:12px;bottom:50px;justify-content:center}.profileArt.hasCover .removeCover{display:block;left:12px;right:12px;bottom:8px;text-align:center}.profileArt.hasCover .coverEmpty{display:none}'''
+          if add not in s:
+              pos=s.find('</style>')
+              if pos<0: raise SystemExit('style close not found')
+              s=s[:pos]+add+s[pos:]
+          # Replace the previously injected remove handler with one that removes the exact
+          # saved cover for the profile currently being viewed, regardless of currentId scope.
+          s=re.sub(r"const removeCoverBtn=document\.getElementById\('removeCover'\);.*?\}\);\}", '', s, count=1, flags=re.S)
+          handler='''\nconst removeCoverBtn=document.getElementById('removeCover');\nif(removeCoverBtn){removeCoverBtn.addEventListener('click',function(e){\n e.preventDefault(); e.stopPropagation();\n const art=document.querySelector('.profileArt');\n const img=document.querySelector('.profileCoverImg');\n const file=document.querySelector('input[type="file"]');\n let id=null;\n try{ if(typeof currentId!=="undefined") id=currentId; }catch(_e){}\n if(!id){ const active=document.querySelector('[data-id].active,[data-dahlia-id]'); if(active) id=active.dataset.id||active.dataset.dahliaId; }\n if(id) localStorage.removeItem('dahliaCover:'+id);\n if(img){img.removeAttribute('src');img.src='';}\n if(art) art.classList.remove('hasCover');\n if(file) file.value='';\n});}\n'''
+          pos=s.rfind('</script>')
+          if pos<0: raise SystemExit('script close not found')
+          s=s[:pos]+handler+s[pos:]
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Place cover controls below photo and fix removal'
+          git push
