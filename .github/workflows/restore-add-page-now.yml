@@ -1,0 +1,23 @@
+name: Restore Add Page Now
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-add-page-now.yml'
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore working index
+        run: git show b832c19efae4941dec214321c24c11ff9dd775f9:index.html > index.html
+      - name: Commit restored index
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add index.html
+          git commit -m 'Restore working Add Dahlia page'
+          git push
