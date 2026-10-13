@@ -1,0 +1,42 @@
+name: Remove Unknown 3 dahlia
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-unknown-3.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove Unknown 3 from seeded dahlia data
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          before=s
+          # Remove an object/entry whose visible label/name is Unknown 3, allowing quote/style variations.
+          patterns=[
+            r'\{[^{}]{0,1200}?(?:label|name|title)\s*:\s*["\']Unknown 3["\'][^{}]{0,1200}?\}\s*,?',
+            r'\{[^{}]{0,1200}?["\'](?:label|name|title)["\']\s*:\s*["\']Unknown 3["\'][^{}]{0,1200}?\}\s*,?'
+          ]
+          for pat in patterns:
+            s,n=re.subn(pat,'',s,count=1,flags=re.I|re.S)
+            if n: break
+          if s==before:
+            # fallback: remove a compact array/object item containing the exact text
+            s,n=re.subn(r'\{[^{}]*Unknown 3[^{}]*\}\s*,?','',s,count=1,flags=re.I|re.S)
+          if s==before:
+            raise SystemExit('Unknown 3 entry not found; refusing to change anything')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Remove Unknown 3 dahlia"
+          git push
