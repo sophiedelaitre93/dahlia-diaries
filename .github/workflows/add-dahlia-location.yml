@@ -1,0 +1,38 @@
+name: Add Dahlia location
+on:
+  push:
+    paths:
+      - '.github/workflows/add-dahlia-location.yml'
+permissions:
+  contents: write
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add location field without changing layout positioning
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'id="ddLocation"' not in s:
+              marker='<label class="addField"><span>NOTES</span>'
+              field='<label class="addField"><span>LOCATION</span><input id="ddLocation" type="text" placeholder="e.g. Front garden, Bed 2, Pot by deck"></label>'
+              if marker not in s:
+                  raise SystemExit('Notes marker not found')
+              s=s.replace(marker,field+marker,1)
+          if 'location:document.getElementById(\'ddLocation\').value' not in s:
+              marker="notes:document.getElementById('ddNotes').value"
+              if marker not in s:
+                  raise SystemExit('Save marker not found')
+              s=s.replace(marker,"location:document.getElementById('ddLocation').value,\n    "+marker,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Add location to Add Dahlia'
+          git push
