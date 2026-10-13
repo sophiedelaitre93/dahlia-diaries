@@ -1,0 +1,33 @@
+name: Remove home card icons
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-home-icons.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove My Dahlias and My Garden icons only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          # Hide only the first (My Dahlias) and third (My Garden) home-card SVGs.
+          # visibility:hidden preserves the existing icon column, divider, spacing and all other layout.
+          rule = '.home .menu .homeNav:nth-child(1) .homeNavIcon svg,.home .menu .homeNav:nth-child(3) .homeNavIcon svg{visibility:hidden}'
+          if rule not in s:
+              s = s.replace('</style>', rule + '</style>', 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Remove My Dahlias and My Garden home icons"
+          git push
