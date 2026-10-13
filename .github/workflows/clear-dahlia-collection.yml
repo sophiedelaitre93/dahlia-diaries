@@ -1,0 +1,43 @@
+name: Clear dahlia collection
+on:
+  push:
+    paths:
+      - '.github/workflows/clear-dahlia-collection.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clear seeded dahlia collection only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          before=s
+          # Find the seeded/default dahlia array and empty it, preserving the collection UI and add flow.
+          patterns=[
+            r'(const\s+(?:dahlias|defaultDahlias|seedDahlias|initialDahlias)\s*=\s*)\[(?:.|\n)*?\](\s*;)',
+            r'(let\s+(?:dahlias|defaultDahlias|seedDahlias|initialDahlias)\s*=\s*)\[(?:.|\n)*?\](\s*;)',
+            r'(var\s+(?:dahlias|defaultDahlias|seedDahlias|initialDahlias)\s*=\s*)\[(?:.|\n)*?\](\s*;)'
+          ]
+          for pat in patterns:
+            s,n=re.subn(pat,r'\1[]\2',s,count=1,flags=re.I|re.S)
+            if n: break
+          if s==before:
+            # Common localStorage fallback form: JSON.parse(localStorage.getItem(...)) || [seed entries]
+            s,n=re.subn(r'(JSON\.parse\([^\n;]{0,500}\)\s*\|\|\s*)\[(?:.|\n)*?\](\s*;)',r'\1[]\2',s,count=1,flags=re.I|re.S)
+          if s==before:
+            raise SystemExit('Seeded dahlia array not found; refusing to alter unrelated code')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Clear dahlia collection"
+          git push
