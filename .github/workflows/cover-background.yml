@@ -1,0 +1,34 @@
+name: Apply faint dahlia empty cover background
+on:
+  push:
+    paths:
+      - '.github/workflows/cover-background.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update empty cover only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          new='''<div class="coverFlower" aria-hidden="true"><svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="50" cy="18" rx="10" ry="31"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(30 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(60 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(90 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(120 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(150 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(180 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(210 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(240 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(270 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(300 50 50)"/><ellipse cx="50" cy="18" rx="10" ry="31" transform="rotate(330 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(45 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(90 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(135 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(180 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(225 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(270 50 50)"/><ellipse cx="50" cy="29" rx="7" ry="21" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="10"/></g></svg></div>'''
+          s,n=re.subn(r'<div class="coverFlower"[^>]*>.*?</div>',new,s,count=1,flags=re.S)
+          if n != 1: raise SystemExit(f'coverFlower matches: {n}')
+          s=re.sub(r'\.coverFlower\{[^}]*\}(?:\.coverFlower svg\{[^}]*\})?', '.coverFlower{position:absolute;inset:3%;width:94%;height:94%;margin:0;color:#8b927f;opacity:.18;pointer-events:none}.coverFlower svg{display:block;width:100%;height:100%}.coverEmptyText{position:relative;z-index:1;font:500 10px/1.7 Montserrat;letter-spacing:.22em}.coverEmptyText:after{content:\"\";display:block;width:34px;height:1px;background:#687369;margin:10px auto 0}', s, count=1)
+          s=s.replace('NO COVER IMAGE<br>SET YET','NO COVER IMAGE<br>SET A COVER PHOTO')
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Use faint dahlia sketch for empty cover"
+          git push
