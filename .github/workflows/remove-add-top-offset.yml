@@ -1,0 +1,33 @@
+name: Remove Add Dahlia top offset
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-add-top-offset.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove top offset without moving markup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          css='''<style id="add-top-offset-final">
+          #addDahliaNew.active{position:fixed!important;inset:0!important;z-index:100!important;display:block!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;background:var(--cream)!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:0 0 40px!important;transform:none!important}
+          #addDahliaNew.active .addDahliaHead{margin:0!important;padding:calc(10px + env(safe-area-inset-top)) 18px 8px!important}
+          </style>'''
+          if 'id="add-top-offset-final"' not in s:
+              s=s.replace('</head>',css+'</head>',1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Remove Add Dahlia top offset'
+          git push
