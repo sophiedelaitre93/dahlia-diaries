@@ -1,0 +1,35 @@
+name: Update empty cover flower icon
+on:
+  push:
+    paths:
+      - '.github/workflows/cover-flower.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace placeholder flower only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          new='''<div class="coverFlower" aria-hidden="true"><svg viewBox="0 0 100 100" role="img"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="50" cy="26" rx="8" ry="19"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(45 50 50)"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(90 50 50)"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(135 50 50)"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(180 50 50)"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(225 50 50)"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(270 50 50)"/><ellipse cx="50" cy="26" rx="8" ry="19" transform="rotate(315 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(45 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(90 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(135 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(180 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(225 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(270 50 50)"/><ellipse cx="50" cy="34" rx="6" ry="13" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="9"/></g></svg></div>'''
+          s2,n=re.subn(r'<div class="coverFlower"[^>]*>.*?</div>',new,s,count=1,flags=re.S)
+          if n != 1:
+              raise SystemExit(f'Expected one coverFlower, found {n}')
+          # size the prototype outline flower without changing other profile elements
+          s2=s2.replace('.coverFlower{font-size:44px;line-height:1;margin-bottom:10px;color:#718574}', '.coverFlower{width:76px;height:76px;margin:0 auto 10px;color:#687369}.coverFlower svg{display:block;width:100%;height:100%}')
+          p.write_text(s2)
+          PY
+      - name: Commit icon update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Use prototype outline flower for empty cover"
+          git push
