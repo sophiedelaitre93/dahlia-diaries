@@ -1,0 +1,38 @@
+name: Center identification button and remove plant icon
+on:
+  push:
+    paths:
+      - '.github/workflows/identify-button-layout.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update identification button only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          old='.identifyBtn{margin-top:12px;min-height:74px;border:1px solid #d5d0c4;border-radius:14px;background:#f1ede2;color:#26342b;padding:10px;display:grid;grid-template-columns:42px 1fr 14px;align-items:center;text-align:left;font-size:12px;line-height:1.35;letter-spacing:.03em}'
+          new='.identifyBtn{margin-top:12px;min-height:74px;border:1px solid #d5d0c4;border-radius:14px;background:#f1ede2;color:#26342b;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:12px;line-height:1.35;letter-spacing:.03em;gap:5px}'
+          if old not in s: raise SystemExit('identifyBtn style not found')
+          s=s.replace(old,new,1)
+          # The existing button SVG contains the plant plus magnifier. Replace only that first identify-button SVG with a plain magnifying glass.
+          pat=r'(<button[^>]*class="identifyBtn"[^>]*>)\s*<svg[^>]*>.*?</svg>'
+          repl=r'\1<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="21" cy="21" r="12"></circle><path d="M30 30l10 10"></path></svg>'
+          s,n=re.subn(pat,repl,s,count=1,flags=re.S)
+          if n != 1: raise SystemExit(f'identify button svg matches: {n}')
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Center identification button and remove plant icon'
+          git push
