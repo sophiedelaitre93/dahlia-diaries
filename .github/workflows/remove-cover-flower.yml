@@ -1,0 +1,32 @@
+name: Remove empty cover background flower
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-cover-flower.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove only empty cover flower
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          s,n=re.subn(r'<div class="coverFlower"[^>]*>.*?</div>','',s,count=1,flags=re.S)
+          if n != 1: raise SystemExit(f'coverFlower matches: {n}')
+          s=re.sub(r'\.coverFlower\{[^}]*\}(?:\.coverFlower svg\{[^}]*\})?','',s,count=1)
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Remove flower from empty cover background"
+          git push
