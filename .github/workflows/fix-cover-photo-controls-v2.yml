@@ -1,0 +1,53 @@
+name: Retry cover photo controls fix
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-cover-photo-controls-v2.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix cover photo behavior
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html'); s=p.read_text()
+          # hide empty state when cover is present
+          anchor='.profileArt.hasCover .profileCoverImg{display:block}'
+          if anchor not in s: raise SystemExit('cover CSS not found')
+          if '.profileArt.hasCover .coverEmpty{display:none}' not in s:
+              s=s.replace(anchor,anchor+'.profileArt.hasCover .coverEmpty{display:none}',1)
+          # find actual cover file input regardless of attribute order/id
+          m=re.search(r'<input[^>]*type=["\']file["\'][^>]*>',s,re.I)
+          if not m: raise SystemExit('file input not found')
+          if 'id="removeCover"' not in s:
+              btn='<button class="removeCover" id="removeCover" type="button">Remove Cover</button>'
+              s=s[:m.start()]+btn+s[m.start():]
+          # add styles after changeCover rule block
+          if '.profileArt.hasCover .removeCover{display:block}' not in s:
+              extra='.removeCover{display:none;position:absolute;right:12px;bottom:12px;z-index:5;border:0;border-radius:24px;background:rgba(218,216,202,.94);color:#35493c;padding:8px 13px;font-size:13px}.profileArt.hasCover .removeCover{display:block}'
+              idx=s.find('.changeCover{')
+              if idx<0: raise SystemExit('changeCover CSS not found')
+              end=s.find('}',idx)+1
+              s=s[:end]+extra+s[end:]
+          # discover actual JS variable names from existing elements
+          # insert listener before closing script, using DOM lookups so it doesn't depend on old variable names
+          if "localStorage.removeItem('dahliaCover:'" not in s:
+              script="""\nconst removeCoverBtn=document.getElementById('removeCover');\nif(removeCoverBtn){removeCoverBtn.addEventListener('click',()=>{\n  const art=document.querySelector('.profileArt');\n  const img=document.querySelector('.profileCoverImg');\n  const file=document.querySelector('.profileArt input[type=file], input[type=file]');\n  localStorage.removeItem('dahliaCover:'+currentId);\n  if(img) img.removeAttribute('src');\n  if(art) art.classList.remove('hasCover');\n  if(file) file.value='';\n});}\n"""
+              pos=s.rfind('</script>')
+              if pos<0: raise SystemExit('script close not found')
+              s=s[:pos]+script+s[pos:]
+          p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix cover photo text and add remove cover'
+          git push
